@@ -1,0 +1,23 @@
+{
+  "name": "benos-framework-website",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "^22.18.0 || ^24.11.0 || >=26.0.0" },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@benosjs/core": "^0.1.1",
+    "@benosjs/dom": "^0.1.1"
+  },
+  "devDependencies": {
+    "@benosjs/compiler": "^0.1.1",
+    "@benosjs/vite": "^0.1.1",
+    "typescript": "^5.9.3",
+    "vite": "8.3.2"
+  }
+}
