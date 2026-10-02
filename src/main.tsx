@@ -2,9 +2,26 @@ import { computed, signal } from '@benosjs/core'
 import { For, Show, render } from '@benosjs/dom'
 import './style.css'
 
-const count = signal(6)
 const copied = signal(false)
 const menuOpen = signal(false)
+const pointer = signal({ x: 0, y: 0 })
+const activeStage = signal<'signal' | 'binding' | 'dom'>('signal')
+
+const stages = [
+  { id: 'signal', label: 'signal', code: 'const user = signal("Ada")', text: 'A signal holds a value and remembers who reads it.' },
+  { id: 'binding', label: 'binding', code: '<h1>{user()}</h1>', text: 'Reading it inside JSX creates a binding: one small subscription, not a re-render.' },
+  { id: 'dom', label: 'DOM node', code: 'user.set("Grace")', text: 'A write updates exactly that text node. The component never runs again.' },
+] as const
+
+const activeInfo = computed(() => stages.find((stage) => stage.id === activeStage()) ?? stages[0])
+
+function trackPointer(event: PointerEvent) {
+  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
+  pointer.set({
+    x: Math.max(-1, Math.min(1, ((event.clientX - box.left) / box.width - 0.5) * 2)),
+    y: Math.max(-1, Math.min(1, ((event.clientY - box.top) / box.height - 0.5) * 2)),
+  })
+}
 const installCommand = 'npm create benos@latest my-app'
 
 const features = [
@@ -32,7 +49,7 @@ const features = [
 ] as const
 
 const counterCode = [
-  "import { signal } from '@benosjs/core'",
+  "import { computed, signal } from '@benosjs/core'",
   "import { render } from '@benosjs/dom'",
   '',
   'const clicks = signal(0)',
@@ -61,8 +78,6 @@ function closeMenu() {
 }
 
 function App() {
-  const doubled = computed(() => count() * 2)
-
   return (
     <>
       <header class="site-header">
@@ -125,51 +140,51 @@ function App() {
                 Read the guide <span aria-hidden="true">↗</span>
               </a>
             </div>
-            <div class="hero-meta">
-              <span>TypeScript</span><i></i><span>TSX</span><i></i><span>Signals</span><i></i><span>Vite</span>
+            <div class="hero-install">
+              <code><span class="terminal-prompt">$</span> {installCommand}</code>
+              <button type="button" onClick={() => void copyInstallCommand()} aria-label="Copy install command">
+                {copied() ? 'Copied' : 'Copy'}
+              </button>
             </div>
           </div>
 
-          <div class="hero-visual" aria-label="Interactive Benos signal counter demo">
-            <div class="demo-card">
-              <div class="demo-card-top">
-                <div class="window-dots"><span></span><span></span><span></span></div>
-                <span class="demo-label"><span class="status-dot"></span> TRY THE SIGNAL</span>
-              </div>
-              <div class="demo-card-body">
-                <p class="demo-overline">INTERACTIVE EXAMPLE / 01</p>
-                <h2>A small change.<br /><span>A live interface.</span></h2>
-                <div class="counter-display">
+          <div
+            class="hero-visual"
+            role="group"
+            aria-label="Interactive diagram of how a signal reaches the DOM"
+            onPointermove={trackPointer}
+            onPointerleave={() => pointer.set({ x: 0, y: 0 })}
+          >
+            <div class="orbit">
+              <span class="ring ring-1" style={`transform: translate(${pointer().x * -8}px, ${pointer().y * -8}px)`}></span>
+              <span class="ring ring-2" style={`transform: translate(${pointer().x * -16}px, ${pointer().y * -16}px)`}></span>
+              <span class="ring ring-3"></span>
+              <img
+                class="orbit-mark"
+                src="/benos-mark-light.png"
+                alt=""
+                style={`transform: translate(${pointer().x * 22}px, ${pointer().y * 22}px) rotate(${pointer().x * 6}deg)`}
+              />
+              <For each={stages} by={(stage) => stage.id}>
+                {(stage) => (
                   <button
-                    class="counter-step"
                     type="button"
-                    aria-label="Decrease clicks"
-                    onClick={() => count.update((value) => value - 1)}
-                  >−</button>
-                  <div class="counter-value" aria-live="polite">{count()}</div>
-                  <button
-                    class="counter-step counter-plus"
-                    type="button"
-                    aria-label="Increase clicks"
-                    onClick={() => count.update((value) => value + 1)}
-                  >+</button>
-                </div>
-                <div class="counter-caption">
-                  <span>Clicks</span>
-                  <span class="caption-divider"></span>
-                  <span>Derived value <strong>{doubled()}</strong></span>
-                </div>
-                <div class="demo-footnote">
-                  <Show when={count() > 0} fallback={<span>Try increasing the signal.</span>}>
-                    <span>Click a button to update the signal.</span>
-                  </Show>
-                  <span class="demo-version">BENOS 0.1.1</span>
-                </div>
-              </div>
+                    class={`orbit-tag tag-${stage().id}${activeStage() === stage().id ? ' is-active' : ''}`}
+                    aria-pressed={activeStage() === stage().id}
+                    onClick={() => activeStage.set(stage().id)}
+                  >
+                    <i></i>{stage().label}
+                  </button>
+                )}
+              </For>
             </div>
-            <div class="hero-visual-note">
-              <span>signal write</span><span class="note-arrow" aria-hidden="true">→</span><span>dependent DOM binding</span>
+            <div class="stage-card" aria-live="polite">
+              <code>{activeInfo().code}</code>
+              <p>{activeInfo().text}</p>
             </div>
+            <p class="pointer-readout">
+              pointer <b>({pointer().x.toFixed(2)}, {pointer().y.toFixed(2)})</b> → 3 style bindings
+            </p>
           </div>
         </section>
 
