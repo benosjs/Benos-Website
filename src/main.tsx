@@ -1,27 +1,10 @@
-import { computed, signal } from '@benosjs/core'
+import { signal } from '@benosjs/core'
 import { For, Show, render } from '@benosjs/dom'
 import './style.css'
 
 const copied = signal(false)
 const menuOpen = signal(false)
-const pointer = signal({ x: 0, y: 0 })
-const activeStage = signal<'signal' | 'binding' | 'dom'>('signal')
-
-const stages = [
-  { id: 'signal', label: 'signal', code: 'const user = signal("Ada")', text: 'A signal holds a value and remembers who reads it.' },
-  { id: 'binding', label: 'binding', code: '<h1>{user()}</h1>', text: 'Reading it inside JSX creates a binding: one small subscription, not a re-render.' },
-  { id: 'dom', label: 'DOM node', code: 'user.set("Grace")', text: 'A write updates exactly that text node. The component never runs again.' },
-] as const
-
-const activeInfo = computed(() => stages.find((stage) => stage.id === activeStage()) ?? stages[0])
-
-function trackPointer(event: PointerEvent) {
-  const box = (event.currentTarget as HTMLElement).getBoundingClientRect()
-  pointer.set({
-    x: Math.max(-1, Math.min(1, ((event.clientX - box.left) / box.width - 0.5) * 2)),
-    y: Math.max(-1, Math.min(1, ((event.clientY - box.top) / box.height - 0.5) * 2)),
-  })
-}
+const heroClicks = signal(0)
 const installCommand = 'npm create benos@latest my-app'
 
 const features = [
@@ -47,6 +30,60 @@ const features = [
     detail: 'TSX + Vite',
   },
 ] as const
+
+type UiGroup = {
+  title: string
+  components: { name: string; slug: string }[]
+}
+
+const uiGroups: UiGroup[] = [
+  {
+    title: 'Foundations',
+    components: [
+      { name: 'Button', slug: 'button' },
+      { name: 'Card', slug: 'card' },
+      { name: 'Badge', slug: 'badge' },
+      { name: 'Separator', slug: 'separator' },
+    ],
+  },
+  {
+    title: 'Forms and choices',
+    components: [
+      { name: 'Input', slug: 'input' },
+      { name: 'Textarea', slug: 'textarea' },
+      { name: 'Label', slug: 'label' },
+      { name: 'Checkbox', slug: 'checkbox' },
+      { name: 'Switch', slug: 'switch' },
+      { name: 'Radio group', slug: 'radio-group' },
+      { name: 'Select', slug: 'select' },
+    ],
+  },
+  {
+    title: 'Navigation',
+    components: [
+      { name: 'Tabs', slug: 'tabs' },
+      { name: 'Accordion', slug: 'accordion' },
+    ],
+  },
+  {
+    title: 'Overlays',
+    components: [
+      { name: 'Dialog', slug: 'dialog' },
+      { name: 'Popover', slug: 'popover' },
+      { name: 'Tooltip', slug: 'tooltip' },
+      { name: 'Dropdown menu', slug: 'dropdown-menu' },
+      { name: 'Toast', slug: 'toast' },
+    ],
+  },
+  {
+    title: 'Data',
+    components: [{ name: 'Sortable table', slug: 'sortable-table' }],
+  },
+]
+
+function uiGuideUrl(slug: string): string {
+  return `https://github.com/benosjs/benos/blob/main/docs/ui/components/${slug}.md`
+}
 
 const counterCode = [
   "import { computed, signal } from '@benosjs/core'",
@@ -87,6 +124,7 @@ function App() {
         </a>
 
         <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#components">Components</a>
           <a href="#why">Why Benos</a>
           <a href="#how">How it works</a>
           <a href="#start">Get started</a>
@@ -115,6 +153,7 @@ function App() {
 
         <Show when={menuOpen()}>
           <nav class="mobile-nav" aria-label="Mobile navigation">
+            <a href="#components" onClick={closeMenu}>Components</a>
             <a href="#why" onClick={closeMenu}>Why Benos</a>
             <a href="#how" onClick={closeMenu}>How it works</a>
             <a href="#start" onClick={closeMenu}>Get started</a>
@@ -148,43 +187,30 @@ function App() {
             </div>
           </div>
 
-          <div
-            class="hero-visual"
-            role="group"
-            aria-label="Interactive diagram of how a signal reaches the DOM"
-            onPointermove={trackPointer}
-            onPointerleave={() => pointer.set({ x: 0, y: 0 })}
-          >
-            <div class="orbit">
-              <span class="ring ring-1" style={`transform: translate(${pointer().x * -8}px, ${pointer().y * -8}px)`}></span>
-              <span class="ring ring-2" style={`transform: translate(${pointer().x * -16}px, ${pointer().y * -16}px)`}></span>
-              <span class="ring ring-3"></span>
-              <img
-                class="orbit-mark"
-                src="/benos-mark-light.png"
-                alt=""
-                style={`transform: translate(${pointer().x * 22}px, ${pointer().y * 22}px) rotate(${pointer().x * 6}deg)`}
-              />
-              <For each={stages} by={(stage) => stage.id}>
-                {(stage) => (
-                  <button
-                    type="button"
-                    class={`orbit-tag tag-${stage().id}${activeStage() === stage().id ? ' is-active' : ''}`}
-                    aria-pressed={activeStage() === stage().id}
-                    onClick={() => activeStage.set(stage().id)}
-                  >
-                    <i></i>{stage().label}
-                  </button>
-                )}
-              </For>
+          <div class="hero-visual">
+            <div class="hero-proof" aria-label="Interactive signal example">
+              <div class="hero-proof-label">
+                <span class="hero-proof-index">Live signal</span>
+                <span class="hero-proof-hint"><i></i> Click to update</span>
+              </div>
+              <div class="hero-proof-body">
+                <button
+                  class="hero-demo-counter"
+                  type="button"
+                  aria-label={`Increment clicks, currently ${heroClicks()}`}
+                  onClick={() => heroClicks.update((count) => count + 1)}
+                >
+                  <span class="hero-count-caption">Clicks</span>
+                  <span class="hero-count-value">{heroClicks()}</span>
+                  <span class="hero-counter-plus" aria-hidden="true">+</span>
+                </button>
+                <div class="hero-proof-explanation">
+                  <span class="hero-proof-line" aria-hidden="true"></span>
+                  <p><strong>Component runs once.</strong> Only the value changes when you click.</p>
+                </div>
+              </div>
+              <div class="hero-proof-footer"><span>Fine-grained updates</span><span>TypeScript + TSX</span></div>
             </div>
-            <div class="stage-card" aria-live="polite">
-              <code>{activeInfo().code}</code>
-              <p>{activeInfo().text}</p>
-            </div>
-            <p class="pointer-readout">
-              pointer <b>({pointer().x.toFixed(2)}, {pointer().y.toFixed(2)})</b> → 3 style bindings
-            </p>
           </div>
         </section>
 
@@ -194,6 +220,64 @@ function App() {
             <b>TypeScript</b><i></i><b>TSX</b><i></i><b>Signals</b><i></i><b>Vite</b><i></i><b>Ownership</b>
           </div>
         </div>
+
+        <section class="components-section" id="components">
+          <div class="section-wrap components-inner">
+            <div class="components-intro">
+              <p class="eyebrow eyebrow-dark">Benos UI · 19 components</p>
+              <h2>Good building blocks.<br /><span>Still yours to shape.</span></h2>
+              <p>
+                Add the pieces you need, then keep their source in your app.
+                Start with a button or build a full interface from forms, overlays,
+                navigation, and data components.
+              </p>
+              <a class="text-link text-link-dark" href="https://github.com/benosjs/benos/blob/main/docs/ui/README.md">
+                Explore the UI guide <span aria-hidden="true">→</span>
+              </a>
+            </div>
+
+            <div class="component-sample" aria-label="Benos UI sample card">
+              <div class="component-sample-top">
+                <span>PROFILE SETTINGS</span>
+                <span class="component-sample-badge"><i></i> Saved</span>
+              </div>
+              <div class="component-sample-body">
+                <h3>Workspace details</h3>
+                <label for="component-project-name">Project name</label>
+                <input id="component-project-name" value="Benos website" readOnly />
+                <div class="component-sample-toggle">
+                  <span class="component-sample-switch" aria-hidden="true"><i></i></span>
+                  <span>Release updates enabled</span>
+                </div>
+                <div class="component-sample-actions">
+                  <a href={uiGuideUrl('button')} target="_blank" rel="noreferrer">
+                    Save changes <span aria-hidden="true">→</span>
+                  </a>
+                  <span>Card · Input · Label · Switch · Badge · Button</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="component-catalog" aria-label="All Benos UI components">
+              <For each={uiGroups} by={(group) => group.title}>
+                {(group) => (
+                  <div class="component-group">
+                    <h3>{group().title}</h3>
+                    <div class="component-links">
+                      <For each={group().components} by={(component) => component.slug}>
+                        {(component) => (
+                          <a href={uiGuideUrl(component().slug)} target="_blank" rel="noreferrer">
+                            {component().name}<span aria-hidden="true">↗</span>
+                          </a>
+                        )}
+                      </For>
+                    </div>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </section>
 
         <section class="section-wrap why-section" id="why">
           <div class="section-heading">
